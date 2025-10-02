@@ -32,57 +32,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+async function ankiRequest(action, params = {}) {
+  const ANKI_CONNECT_URL = 'http://localhost:8765';
+  
+  const response = await fetch(ANKI_CONNECT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: action,
+      version: 6,
+      params: params
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`AnkiConnect request failed: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  
+  if (data.error) {
+    throw new Error(data.error);
+  }
+  
+  return data.result;
+}
+
 async function handleScreenshotCapture(imageDataUrl, card) {
   const base64Data = imageDataUrl.split(',')[1];
   
   const timestamp = Date.now();
   const filename = `anki_screenshot_${card.noteId}_${timestamp}.png`;
   
-  const ANKI_CONNECT_URL = 'http://localhost:8765';
-  
-  const storeResponse = await fetch(ANKI_CONNECT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'storeMediaFile',
-      version: 6,
-      params: {
-        filename: filename,
-        data: base64Data
-      }
-    })
+  await ankiRequest('storeMediaFile', {
+    filename: filename,
+    data: base64Data
   });
-  
-  const storeData = await storeResponse.json();
-  if (storeData.error) {
-    throw new Error(storeData.error);
-  }
   
   const currentFront = card.fields.Front?.value || '';
   const imageTag = `<img src="${filename}">`;
   const updatedFront = currentFront + '<br>' + imageTag;
   
-  const updateResponse = await fetch(ANKI_CONNECT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'updateNoteFields',
-      version: 6,
-      params: {
-        note: {
-          id: card.noteId,
-          fields: {
-            Front: updatedFront
-          }
-        }
+  await ankiRequest('updateNoteFields', {
+    note: {
+      id: card.noteId,
+      fields: {
+        Front: updatedFront
       }
-    })
+    }
   });
-  
-  const updateData = await updateResponse.json();
-  if (updateData.error) {
-    throw new Error(updateData.error);
-  }
   
   chrome.notifications.create({
     type: 'basic',
