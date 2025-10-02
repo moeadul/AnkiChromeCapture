@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anki Screenshot Helper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Anki Screenshot Helper</h1>
+      <div class="status">
+        <span id="connection-status" class="status-indicator"></span>
+        <span id="connection-text">Checking...</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="deck-section">
+        <label for="deck-select">Select Deck:</label>
+        <select id="deck-select" disabled>
+          <option value="">-- Select a deck --</option>
+        </select>
+        <button id="refresh-decks" disabled>↻</button>
+      </section>
+
+      <section class="filter-section">
+        <label>
+          <input type="checkbox" id="show-without-images" checked>
+          Show only cards without images
+        </label>
+        <div class="card-count">
+          <span id="card-count">0 cards</span>
+        </div>
+      </section>
+
+      <section class="cards-section">
+        <div id="cards-list" class="cards-list">
+          <div class="empty-state">Select a deck to view cards</div>
+        </div>
+      </section>
+
+      <section class="selected-section">
+        <div id="selected-card-info" class="selected-info">
+          No card selected
+        </div>
+        <button id="clear-selection" disabled>Clear Selection</button>
+      </section>
+
+      <section class="instructions">
+        <p><strong>How to use:</strong></p>
+        <ol>
+          <li>Select a card from the list above</li>
+          <li>Press <kbd>Ctrl+Shift+S</kbd> (or <kbd>⌘+Shift+S</kbd> on Mac) while browsing</li>
+          <li>Draw a box around the area to capture</li>
+          <li>The screenshot will be added to your selected card</li>
+        </ol>
+      </section>
+    </main>
+  </div>
+
+  <script src="ankiconnect.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

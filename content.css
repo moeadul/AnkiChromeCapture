@@ -1,0 +1,35 @@
+#anki-screenshot-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 2147483647;
+  cursor: crosshair;
+}
+
+#anki-capture-instructions {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2196F3;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 2147483648;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#anki-selection-box {
+  position: fixed;
+  border: 2px solid #2196F3;
+  background: rgba(33, 150, 243, 0.2);
+  display: none;
+  z-index: 2147483648;
+  pointer-events: none;
+}
