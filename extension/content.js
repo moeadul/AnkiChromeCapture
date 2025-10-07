@@ -96,15 +96,6 @@ function handleKeyDown(e) {
 
 async function captureSelectedArea(rect) {
   try {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    const scale = window.devicePixelRatio || 1;
-    canvas.width = rect.width * scale;
-    canvas.height = rect.height * scale;
-    
-    ctx.scale(scale, scale);
-    
     const stream = await navigator.mediaDevices.getDisplayMedia({
       video: {
         displaySurface: 'browser'
@@ -125,16 +116,27 @@ async function captureSelectedArea(rect) {
     const scaleX = videoWidth / window.innerWidth;
     const scaleY = videoHeight / window.innerHeight;
     
+    const sourceX = Math.round(rect.left * scaleX);
+    const sourceY = Math.round(rect.top * scaleY);
+    const sourceWidth = Math.round(rect.width * scaleX);
+    const sourceHeight = Math.round(rect.height * scaleY);
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    canvas.width = sourceWidth;
+    canvas.height = sourceHeight;
+    
     ctx.drawImage(
       video,
-      rect.left * scaleX,
-      rect.top * scaleY,
-      rect.width * scaleX,
-      rect.height * scaleY,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
       0,
       0,
-      rect.width,
-      rect.height
+      sourceWidth,
+      sourceHeight
     );
     
     stream.getTracks().forEach(track => track.stop());
