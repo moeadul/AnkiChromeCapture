@@ -24,8 +24,8 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'captureComplete') {
-    handleScreenshotCapture(message.imageData, message.card)
+  if (message.action === 'captureArea') {
+    handleCaptureArea(message.coordinates, message.card, sender.tab.id)
       .then(result => sendResponse({ success: true, result }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
@@ -58,8 +58,14 @@ async function ankiRequest(action, params = {}) {
   return data.result;
 }
 
-async function handleScreenshotCapture(imageDataUrl, card) {
-  const base64Data = imageDataUrl.split(',')[1];
+async function handleCaptureArea(coordinates, card, tabId) {
+  const screenshotDataUrl = await chrome.tabs.captureVisibleTab(null, {
+    format: 'png'
+  });
+  
+  const croppedImageData = await cropImage(screenshotDataUrl, coordinates);
+  
+  const base64Data = croppedImageData.split(',')[1];
   
   const timestamp = Date.now();
   const filename = `anki_screenshot_${card.noteId}_${timestamp}.png`;
@@ -90,4 +96,28 @@ async function handleScreenshotCapture(imageDataUrl, card) {
   });
   
   return { filename };
+}
+
+async function cropImage(dataUrl, coordinates) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const dpr = coordinates.devicePixelRatio;
+      const x = coordinates.x * dpr;
+      const y = coordinates.y * dpr;
+      const width = coordinates.width * dpr;
+      const height = coordinates.height * dpr;
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
+      
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.src = dataUrl;
+  });
 }

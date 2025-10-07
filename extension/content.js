@@ -96,56 +96,15 @@ function handleKeyDown(e) {
 
 async function captureSelectedArea(rect) {
   try {
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: {
-        displaySurface: 'browser'
-      }
-    });
-    
-    const video = document.createElement('video');
-    video.srcObject = stream;
-    video.play();
-    
-    await new Promise(resolve => {
-      video.onloadedmetadata = resolve;
-    });
-    
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-    
-    const scaleX = videoWidth / window.innerWidth;
-    const scaleY = videoHeight / window.innerHeight;
-    
-    const sourceX = Math.round(rect.left * scaleX);
-    const sourceY = Math.round(rect.top * scaleY);
-    const sourceWidth = Math.round(rect.width * scaleX);
-    const sourceHeight = Math.round(rect.height * scaleY);
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    
-    canvas.width = sourceWidth;
-    canvas.height = sourceHeight;
-    
-    ctx.drawImage(
-      video,
-      sourceX,
-      sourceY,
-      sourceWidth,
-      sourceHeight,
-      0,
-      0,
-      sourceWidth,
-      sourceHeight
-    );
-    
-    stream.getTracks().forEach(track => track.stop());
-    
-    const imageData = canvas.toDataURL('image/png');
-    
     chrome.runtime.sendMessage({
-      action: 'captureComplete',
-      imageData: imageData,
+      action: 'captureArea',
+      coordinates: {
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        devicePixelRatio: window.devicePixelRatio
+      },
       card: currentCard
     }, (response) => {
       if (response && response.success) {
