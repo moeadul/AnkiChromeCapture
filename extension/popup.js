@@ -12,7 +12,12 @@ const elements = {
   cardCount: document.getElementById('card-count'),
   cardsList: document.getElementById('cards-list'),
   selectedCardInfo: document.getElementById('selected-card-info'),
-  clearSelection: document.getElementById('clear-selection')
+  clearSelection: document.getElementById('clear-selection'),
+  guidedModeSection: document.getElementById('guided-mode-section'),
+  startGuidedMode: document.getElementById('start-guided-mode'),
+  guidedProgress: document.getElementById('guided-progress'),
+  progressText: document.getElementById('progress-text'),
+  stopGuidedMode: document.getElementById('stop-guided-mode')
 };
 
 async function initialize() {
@@ -22,6 +27,7 @@ async function initialize() {
   if (isConnected) {
     await loadDecks();
     await loadSelectedCard();
+    await checkGuidedModeState();
   }
   
   setupEventListeners();
@@ -82,6 +88,7 @@ function filterAndDisplayCards() {
   }
   
   displayCards();
+  updateGuidedModeButton();
 }
 
 function displayCards() {
@@ -196,10 +203,75 @@ function setupEventListeners() {
   });
   
   elements.clearSelection.addEventListener('click', clearSelection);
+  
+  elements.startGuidedMode.addEventListener('click', startGuidedMode);
+  elements.stopGuidedMode.addEventListener('click', stopGuidedMode);
 }
 
 function showError(message) {
   elements.cardsList.innerHTML = `<div class="empty-state" style="color: #f44336;">${message}</div>`;
+}
+
+async function startGuidedMode() {
+  const cardsWithoutImages = allCards.filter(card => !cardHasImage(card));
+  
+  if (cardsWithoutImages.length === 0) {
+    alert('No cards without images found in this deck!');
+    return;
+  }
+  
+  const guidedMode = {
+    active: true,
+    cardQueue: cardsWithoutImages,
+    currentIndex: 0,
+    deckName: currentDeck
+  };
+  
+  await chrome.storage.local.set({ 
+    guidedMode: guidedMode,
+    selectedCard: cardsWithoutImages[0]
+  });
+  
+  selectedCard = cardsWithoutImages[0];
+  updateGuidedModeUI(guidedMode);
+  updateSelectedCardDisplay();
+}
+
+async function stopGuidedMode() {
+  await chrome.storage.local.remove('guidedMode');
+  
+  elements.startGuidedMode.style.display = 'block';
+  elements.guidedProgress.style.display = 'none';
+  elements.guidedModeSection.style.display = 'none';
+}
+
+async function checkGuidedModeState() {
+  const result = await chrome.storage.local.get('guidedMode');
+  
+  if (result.guidedMode && result.guidedMode.active) {
+    updateGuidedModeUI(result.guidedMode);
+  }
+}
+
+function updateGuidedModeUI(guidedMode) {
+  elements.guidedModeSection.style.display = 'block';
+  elements.startGuidedMode.style.display = 'none';
+  elements.guidedProgress.style.display = 'flex';
+  
+  const current = guidedMode.currentIndex + 1;
+  const total = guidedMode.cardQueue.length;
+  elements.progressText.textContent = `Card ${current} of ${total}`;
+}
+
+function updateGuidedModeButton() {
+  const cardsWithoutImages = allCards.filter(card => !cardHasImage(card));
+  
+  if (cardsWithoutImages.length > 0 && currentDeck) {
+    elements.guidedModeSection.style.display = 'block';
+    elements.startGuidedMode.disabled = false;
+  } else {
+    elements.startGuidedMode.disabled = true;
+  }
 }
 
 initialize();

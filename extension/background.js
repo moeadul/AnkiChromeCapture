@@ -88,36 +88,81 @@ async function handleCaptureArea(coordinates, card, tabId) {
     }
   });
   
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icon48.png',
-    title: 'Screenshot Added',
-    message: 'Image successfully added to Anki card!'
-  });
+  const guidedState = await chrome.storage.local.get('guidedMode');
+  
+  if (guidedState.guidedMode && guidedState.guidedMode.active) {
+    await advanceToNextCard(guidedState.guidedMode);
+  } else {
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icon48.png',
+      title: 'Screenshot Added',
+      message: 'Image successfully added to Anki card!'
+    });
+  }
   
   return { filename };
 }
 
+async function advanceToNextCard(guidedMode) {
+  const currentIndex = guidedMode.currentIndex + 1;
+  const totalCards = guidedMode.cardQueue.length;
+  
+  if (currentIndex >= totalCards) {
+    await chrome.storage.local.remove('guidedMode');
+    await chrome.storage.local.remove('selectedCard');
+    
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icon48.png',
+      title: 'Guided Mode Complete!',
+      message: `All ${totalCards} cards now have images!`
+    });
+  } else {
+    const nextCard = guidedMode.cardQueue[currentIndex];
+    
+    await chrome.storage.local.set({
+      selectedCard: nextCard,
+      guidedMode: {
+        ...guidedMode,
+        currentIndex: currentIndex
+      }
+    });
+    
+    const cardPreview = stripHtmlTags(nextCard.question).substring(0, 50);
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icon48.png',
+      title: `Card ${currentIndex + 1} of ${totalCards}`,
+      message: `Next: ${cardPreview || '(Empty card)'}...`
+    });
+  }
+}
+
+function stripHtmlTags(html) {
+  return html.replace(/<[^>]*>/g, '');
+}
+
 async function cropImage(dataUrl, coordinates) {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  const imageBitmap = await createImageBitmap(blob);
+  
+  const dpr = coordinates.devicePixelRatio;
+  const x = coordinates.x * dpr;
+  const y = coordinates.y * dpr;
+  const width = coordinates.width * dpr;
+  const height = coordinates.height * dpr;
+  
+  const canvas = new OffscreenCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+  
+  ctx.drawImage(imageBitmap, x, y, width, height, 0, 0, width, height);
+  
+  const resultBlob = await canvas.convertToBlob({ type: 'image/png' });
   return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      const dpr = coordinates.devicePixelRatio;
-      const x = coordinates.x * dpr;
-      const y = coordinates.y * dpr;
-      const width = coordinates.width * dpr;
-      const height = coordinates.height * dpr;
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      ctx.drawImage(img, x, y, width, height, 0, 0, width, height);
-      
-      resolve(canvas.toDataURL('image/png'));
-    };
-    img.src = dataUrl;
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(resultBlob);
   });
 }
