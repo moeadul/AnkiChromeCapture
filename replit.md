@@ -8,8 +8,20 @@ This project is a Chrome browser extension that enables users to capture screens
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (October 2, 2025)
+## Recent Changes
 
+### October 10, 2025
+- **Added Guided Mode**: Automated workflow for batch processing cards
+  - Select deck → click "Start Guided Mode" → automatically cycles through cards without images
+  - After each screenshot capture, auto-advances to next card needing an image
+  - Shows progress indicator (e.g., "Card 3 of 15")
+  - Displays completion notification when all cards have images
+  - Can stop/restart guided mode anytime
+- **Fixed Service Worker Compatibility**: Replaced Image API with OffscreenCanvas and createImageBitmap for Manifest V3
+- **Implemented Real-time State Sync**: Popup UI updates automatically when background script advances to next card
+- **Added Card Data Refresh**: Popup refreshes card metadata after each capture to accurately track completion
+
+### October 2, 2025
 - Built complete Chrome extension for Anki screenshot capture
 - Added notifications permission to manifest (critical fix for user feedback)
 - Refactored background.js to use consistent AnkiRequest function
@@ -63,9 +75,11 @@ The extension follows the Chrome Extension Manifest V3 architecture with three m
 - Shows filterable list of cards (with option to show only cards without images)
 - Maintains selected card state in Chrome's local storage
 - Provides refresh functionality to reload deck/card data
+- **Guided Mode**: Automated batch processing workflow that cycles through cards without images
 
 ### Communication Flow
 
+**Manual Mode:**
 1. User opens popup → checks AnkiConnect connection → loads deck list
 2. User selects deck → fetches and displays cards from that deck
 3. User clicks card → stores selection in Chrome local storage
@@ -75,12 +89,25 @@ The extension follows the Chrome Extension Manifest V3 architecture with three m
 7. User completes selection → content script sends image data to background
 8. Background worker sends image to AnkiConnect API with card ID
 
+**Guided Mode:**
+1. User selects deck → clicks "Start Guided Mode" → creates queue of cards without images
+2. First card in queue is auto-selected and stored in Chrome local storage
+3. User captures screenshot (same flow as manual mode steps 4-8)
+4. After successful capture → background auto-advances to next card in queue
+5. Background updates storage with new selectedCard and currentIndex
+6. Popup listens to storage.onChanged → refreshes UI with new card and progress
+7. Popup refetches card data from AnkiConnect to update image status
+8. Process repeats until all cards have images → displays completion notification
+
 ### State Management
 
 - Selected card stored in Chrome's local storage for persistence across sessions
 - Connection status checked on popup initialization
 - Card lists filtered client-side based on image presence
-- No complex state management library needed due to simple data flow
+- **Guided Mode State**: Stores active status, card queue, and current index in Chrome local storage
+- **Real-time Sync**: Popup listens to storage.onChanged events to update UI when background advances cards
+- **Card Data Refresh**: Popup refetches card metadata after each capture to maintain accurate image status
+- No complex state management library needed due to storage-based event system
 
 ### UI/UX Design Decisions
 
