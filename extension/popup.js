@@ -78,6 +78,15 @@ async function loadCardsFromDeck(deckName) {
   }
 }
 
+async function refreshCardsFromDeck() {
+  try {
+    allCards = await getCardsInDeck(currentDeck);
+    filterAndDisplayCards();
+  } catch (error) {
+    console.error('Failed to refresh cards:', error);
+  }
+}
+
 function filterAndDisplayCards() {
   const showOnlyWithoutImages = elements.showWithoutImages.checked;
   
@@ -206,6 +215,17 @@ function setupEventListeners() {
   
   elements.startGuidedMode.addEventListener('click', startGuidedMode);
   elements.stopGuidedMode.addEventListener('click', stopGuidedMode);
+  
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local') {
+      if (changes.guidedMode) {
+        handleGuidedModeChange(changes.guidedMode.newValue);
+      }
+      if (changes.selectedCard) {
+        handleSelectedCardChange(changes.selectedCard.newValue);
+      }
+    }
+  });
 }
 
 function showError(message) {
@@ -242,7 +262,7 @@ async function stopGuidedMode() {
   
   elements.startGuidedMode.style.display = 'block';
   elements.guidedProgress.style.display = 'none';
-  elements.guidedModeSection.style.display = 'none';
+  updateGuidedModeButton();
 }
 
 async function checkGuidedModeState() {
@@ -272,6 +292,42 @@ function updateGuidedModeButton() {
   } else {
     elements.startGuidedMode.disabled = true;
   }
+}
+
+async function handleGuidedModeChange(guidedMode) {
+  if (guidedMode && guidedMode.active) {
+    updateGuidedModeUI(guidedMode);
+    
+    if (guidedMode.currentIndex > 0 && currentDeck) {
+      await refreshCardsFromDeck();
+    }
+  } else {
+    elements.startGuidedMode.style.display = 'block';
+    elements.guidedProgress.style.display = 'none';
+    
+    if (currentDeck) {
+      await refreshCardsFromDeck();
+    }
+  }
+}
+
+function handleSelectedCardChange(card) {
+  selectedCard = card;
+  updateSelectedCardDisplay();
+  
+  document.querySelectorAll('.card-item').forEach(el => {
+    el.classList.remove('selected');
+  });
+  
+  if (card) {
+    const cardElement = document.querySelector(`[data-card-id="${card.cardId}"]`);
+    if (cardElement) {
+      cardElement.classList.add('selected');
+      cardElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+  
+  updateGuidedModeButton();
 }
 
 initialize();
